@@ -5,8 +5,51 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import matplotlib.pyplot as plt
 import io
+import os
 
-# --- High-Resolution 300 DPI Matplotlib Image Generators ---
+# --- Page Setup ---
+st.set_page_config(page_title="ARoHaN Lab - Multi-QC Chart Dashboard", layout="wide")
+
+# --- Header Section with ARoHaN Lab Branding ---
+col_logo, col_title = st.columns([1, 4])
+
+# Path to logo (or uploaded image file)
+logo_path = "AroHaN_Lab_Group_2D_Logo-removebg-preview.jpg"
+
+with col_logo:
+    if os.path.exists(logo_path):
+        st.image(logo_path, width=160)
+    else:
+        st.write("🔬 **ARoHaN Lab**")
+
+with col_title:
+    st.title("ARoHaN Lab - Quality Control Dashboard")
+    st.markdown(
+        """
+        *Developed by **ARoHaN Lab** (Advance Research on Herbals and Naturals, Department of Pharmaceutical Sciences & Technology, BIT Mesra • PI: Dr. Manik Ghosh).*
+        This interactive tool provides real-time quality assurance for weight variations and analytical batch metrics using **Shewhart/Westgard Rules**, **Individual-Moving Range (I-MR)**, and **Cumulative Sum (CUSUM)** control charts.
+        """
+    )
+
+st.markdown("---")
+
+# --- Interactive Spike Line Helper ---
+def apply_interactive_spikelines(fig):
+    """Adds vertical spike/crosshair line for matching values against limits on hover."""
+    fig.update_layout(
+        hovermode="x unified",
+        hoverlabel=dict(bgcolor="rgba(255, 255, 255, 0.9)", font_size=12)
+    )
+    fig.update_xaxes(
+        showspikes=True,
+        spikethickness=1.5,
+        spikecolor="#D32F2F",
+        spikemode="across",
+        spikesnap="cursor"
+    )
+    return fig
+
+# --- High-DPI 300 DPI Matplotlib Image Generators ---
 
 def render_shewhart_matplotlib(df, col_name, mean, std_dev, dpi=300):
     fig, ax = plt.subplots(figsize=(12, 6), dpi=dpi)
@@ -30,10 +73,8 @@ def render_shewhart_matplotlib(df, col_name, mean, std_dev, dpi=300):
     ax.axhline(mean - 3*std_dev, color='red', linestyle='--', alpha=0.7, label=f'-3 SD ({mean-3*std_dev:.2f})')
     
     ax.set_title("Shewhart Control Chart (Westgard Rules)", fontsize=14, fontweight='bold')
-    ax.set_xlabel("Run Number", fontsize=11)
-    ax.set_ylabel(col_name, fontsize=11)
-    ax.legend(bbox_to_anchor=(1.02, 1), loc='upper left')
-    ax.grid(True, linestyle=':', alpha=0.6)
+    ax.set_xlabel("Run Number", fontsize=11); ax.set_ylabel(col_name, fontsize=11)
+    ax.legend(bbox_to_anchor=(1.02, 1), loc='upper left'); ax.grid(True, linestyle=':', alpha=0.6)
     plt.tight_layout()
     
     png_buf, jpg_buf = io.BytesIO(), io.BytesIO()
@@ -53,19 +94,16 @@ def render_imr_matplotlib(data, dpi=300):
     ucl_mr = 3.267 * mr_bar
     
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8), dpi=dpi, sharex=True)
-    
     ax1.plot(range(1, len(data)+1), data, marker='o', color='royalblue')
     ax1.axhline(x_bar, color='green', label=f'Mean ({x_bar:.2f})')
     ax1.axhline(ucl_i, color='red', linestyle='--', label=f'UCL ({ucl_i:.2f})')
     ax1.axhline(lcl_i, color='red', linestyle='--', label=f'LCL ({lcl_i:.2f})')
-    ax1.set_title("Individual Value (I) Chart", fontweight='bold')
-    ax1.set_ylabel("Value"); ax1.legend(loc='upper left'); ax1.grid(True, linestyle=':', alpha=0.6)
+    ax1.set_title("Individual Value (I) Chart", fontweight='bold'); ax1.set_ylabel("Value"); ax1.legend(loc='upper left'); ax1.grid(True, linestyle=':', alpha=0.6)
 
     ax2.plot(range(1, len(data)+1), mr, marker='s', color='purple')
     ax2.axhline(mr_bar, color='green', label=f'MR Mean ({mr_bar:.2f})')
     ax2.axhline(ucl_mr, color='red', linestyle='--', label=f'UCL ({ucl_mr:.2f})')
-    ax2.set_title("Moving Range (MR) Chart", fontweight='bold')
-    ax2.set_xlabel("Run Number"); ax2.set_ylabel("Moving Range"); ax2.legend(loc='upper left'); ax2.grid(True, linestyle=':', alpha=0.6)
+    ax2.set_title("Moving Range (MR) Chart", fontweight='bold'); ax2.set_xlabel("Run Number"); ax2.set_ylabel("Moving Range"); ax2.legend(loc='upper left'); ax2.grid(True, linestyle=':', alpha=0.6)
 
     plt.tight_layout()
     png_buf, jpg_buf = io.BytesIO(), io.BytesIO()
@@ -80,13 +118,10 @@ def render_cusum_matplotlib(c_plus, c_minus, h_val, dpi=300):
     runs = range(1, len(c_plus) + 1)
     ax.plot(runs, c_plus, marker='o', color='crimson', label='C+ (Upper Shift)')
     ax.plot(runs, -c_minus, marker='s', color='royalblue', label='C- (Lower Shift)')
-    
     ax.axhline(h_val, color='red', linestyle='--', label=f'+H ({h_val:.2f})')
     ax.axhline(-h_val, color='red', linestyle='--', label=f'-H ({-h_val:.2f})')
     ax.axhline(0, color='gray', linewidth=1)
-    
-    ax.set_title("Cumulative Sum (CUSUM) Chart", fontsize=14, fontweight='bold')
-    ax.set_xlabel("Run Number"); ax.set_ylabel("Cumulative Sum"); ax.legend(loc='upper left'); ax.grid(True, linestyle=':', alpha=0.6)
+    ax.set_title("Cumulative Sum (CUSUM) Chart", fontsize=14, fontweight='bold'); ax.set_xlabel("Run Number"); ax.set_ylabel("Cumulative Sum"); ax.legend(loc='upper left'); ax.grid(True, linestyle=':', alpha=0.6)
     plt.tight_layout()
     
     png_buf, jpg_buf = io.BytesIO(), io.BytesIO()
@@ -104,8 +139,7 @@ def evaluate_westgard_rules(data, mean, std):
     for i in range(len(data_list)):
         val = data_list[i]
         if val > mean + 3*std or val < mean - 3*std:
-            results[i] = "Reject (1_3s)"
-            continue 
+            results[i] = "Reject (1_3s)"; continue 
         if i >= 1:
             prev = data_list[i-1]
             if (val > mean + 2*std and prev > mean + 2*std) or (val < mean - 2*std and prev < mean - 2*std):
@@ -146,18 +180,14 @@ def calculate_cusum(data, target=None, k_factor=0.5, h_factor=4.0):
             status[i] = "Out of Control"
     return c_plus, c_minus, h, mu_0, sigma, status
 
-# --- Streamlit Dashboard Layout ---
-
-st.set_page_config(page_title="Multi-QC Chart Dashboard", layout="wide")
-st.title("Comprehensive Quality Control Dashboard")
+# --- File Processing & Display ---
 
 uploaded_file = st.file_uploader("Upload Excel File", type=["xlsx"])
 
-# Plotly High-DPI Camera Config (Scale 3.125 = 300 DPI equivalent)
 plotly_300dpi_config = {
     'toImageButtonOptions': {
         'format': 'png',
-        'filename': 'qc_chart_300dpi',
+        'filename': 'arohan_qc_chart',
         'height': 900,
         'width': 1600,
         'scale': 3.125
@@ -172,7 +202,6 @@ if uploaded_file:
         df_raw = xl.parse(selected_sheet)
         selected_col = col_s2.selectbox("Select column to analyze:", df_raw.columns)
         
-        # Clean data to numeric
         clean_series = pd.to_numeric(df_raw[selected_col], errors='coerce').dropna().reset_index(drop=True)
         
         if clean_series.empty:
@@ -190,23 +219,23 @@ if uploaded_file:
                 df['Westgard_Decision'] = evaluate_westgard_rules(data, mean, std_dev)
                 
                 fig1 = go.Figure()
-                fig1.add_trace(go.Scatter(y=data, mode='lines', line=dict(color='lightgray', width=2), showlegend=False))
+                fig1.add_trace(go.Scatter(x=df['Run Number'], y=data, mode='lines', name='Value', line=dict(color='lightgray', width=2)))
                 
                 colors = {"Accept": "green", "Warning (1_2s)": "orange", "Reject (1_3s)": "red", "Reject (2_2s)": "darkred", "Reject (R_4s)": "purple", "Reject (4_1s)": "magenta", "Reject (10_x)": "brown"}
                 for dec, col in colors.items():
                     sub = df[df['Westgard_Decision'] == dec]
                     if not sub.empty:
-                        fig1.add_trace(go.Scatter(x=sub.index, y=sub[selected_col], mode='markers', name=dec, marker=dict(color=col, size=10)))
+                        fig1.add_trace(go.Scatter(x=sub['Run Number'], y=sub[selected_col], mode='markers', name=dec, marker=dict(color=col, size=10)))
                 
-                fig1.add_hline(y=mean, line_color="green")
-                fig1.add_hline(y=mean + 2*std_dev, line_dash="dash", line_color="orange")
-                fig1.add_hline(y=mean - 2*std_dev, line_dash="dash", line_color="orange")
-                fig1.add_hline(y=mean + 3*std_dev, line_dash="dash", line_color="red")
-                fig1.add_hline(y=mean - 3*std_dev, line_dash="dash", line_color="red")
+                fig1.add_hline(y=mean, line_color="green", name="Mean", annotation_text=f"Mean ({mean:.2f})")
+                fig1.add_hline(y=mean + 2*std_dev, line_dash="dash", line_color="orange", annotation_text=f"+2 SD ({mean+2*std_dev:.2f})")
+                fig1.add_hline(y=mean - 2*std_dev, line_dash="dash", line_color="orange", annotation_text=f"-2 SD ({mean-2*std_dev:.2f})")
+                fig1.add_hline(y=mean + 3*std_dev, line_dash="dash", line_color="red", annotation_text=f"+3 SD ({mean+3*std_dev:.2f})")
+                fig1.add_hline(y=mean - 3*std_dev, line_dash="dash", line_color="red", annotation_text=f"-3 SD ({mean-3*std_dev:.2f})")
                 
+                fig1 = apply_interactive_spikelines(fig1)
                 st.plotly_chart(fig1, use_container_width=True, config=plotly_300dpi_config)
                 
-                # 300 DPI Export Buttons
                 png_bytes, jpg_bytes = render_shewhart_matplotlib(df, selected_col, mean, std_dev, dpi=300)
                 c1, c2, c3 = st.columns(3)
                 c1.download_button("🖼️ Download 300 DPI PNG", png_bytes, "shewhart_300dpi.png", "image/png")
@@ -219,15 +248,16 @@ if uploaded_file:
                 mr, x_bar, mr_bar, ucl_i, lcl_i, ucl_mr, lcl_mr = calculate_imr(data)
                 
                 fig2 = make_subplots(rows=2, cols=1, shared_xaxes=True, subplot_titles=("Individual Value (I)", "Moving Range (MR)"))
-                fig2.add_trace(go.Scatter(y=data, mode='lines+markers', name='Individual'), row=1, col=1)
-                fig2.add_hline(y=x_bar, line_color="green", row=1, col=1)
-                fig2.add_hline(y=ucl_i, line_dash="dash", line_color="red", row=1, col=1)
-                fig2.add_hline(y=lcl_i, line_dash="dash", line_color="red", row=1, col=1)
+                fig2.add_trace(go.Scatter(x=df['Run Number'], y=data, mode='lines+markers', name='Individual Value', line=dict(color='blue')), row=1, col=1)
+                fig2.add_hline(y=x_bar, line_color="green", annotation_text=f"Mean ({x_bar:.2f})", row=1, col=1)
+                fig2.add_hline(y=ucl_i, line_dash="dash", line_color="red", annotation_text=f"UCL ({ucl_i:.2f})", row=1, col=1)
+                fig2.add_hline(y=lcl_i, line_dash="dash", line_color="red", annotation_text=f"LCL ({lcl_i:.2f})", row=1, col=1)
                 
-                fig2.add_trace(go.Scatter(y=mr, mode='lines+markers', name='Moving Range', line=dict(color='purple')), row=2, col=1)
-                fig2.add_hline(y=mr_bar, line_color="green", row=2, col=1)
-                fig2.add_hline(y=ucl_mr, line_dash="dash", line_color="red", row=2, col=1)
+                fig2.add_trace(go.Scatter(x=df['Run Number'], y=mr, mode='lines+markers', name='Moving Range', line=dict(color='purple')), row=2, col=1)
+                fig2.add_hline(y=mr_bar, line_color="green", annotation_text=f"MR Mean ({mr_bar:.2f})", row=2, col=1)
+                fig2.add_hline(y=ucl_mr, line_dash="dash", line_color="red", annotation_text=f"UCL ({ucl_mr:.2f})", row=2, col=1)
                 
+                fig2 = apply_interactive_spikelines(fig2)
                 st.plotly_chart(fig2, use_container_width=True, config=plotly_300dpi_config)
                 
                 png_imr, jpg_imr = render_imr_matplotlib(data, dpi=300)
@@ -247,11 +277,13 @@ if uploaded_file:
                 df['CUSUM_Decision'] = cusum_status
                 
                 fig3 = go.Figure()
-                fig3.add_trace(go.Scatter(y=c_plus, mode='lines+markers', name='C+', line=dict(color='crimson')))
-                fig3.add_trace(go.Scatter(y=-c_minus, mode='lines+markers', name='C-', line=dict(color='royalblue')))
-                fig3.add_hline(y=h_calc, line_dash="dash", line_color="red")
-                fig3.add_hline(y=-h_calc, line_dash="dash", line_color="red")
+                fig3.add_trace(go.Scatter(x=df['Run Number'], y=c_plus, mode='lines+markers', name='C+ (Upper Shift)', line=dict(color='crimson')))
+                fig3.add_trace(go.Scatter(x=df['Run Number'], y=-c_minus, mode='lines+markers', name='C- (Lower Shift)', line=dict(color='royalblue')))
+                fig3.add_hline(y=h_calc, line_dash="dash", line_color="red", annotation_text=f"+H ({h_calc:.2f})")
+                fig3.add_hline(y=-h_calc, line_dash="dash", line_color="red", annotation_text=f"-H ({-h_calc:.2f})")
+                fig3.add_hline(y=0, line_dash="solid", line_color="gray")
                 
+                fig3 = apply_interactive_spikelines(fig3)
                 st.plotly_chart(fig3, use_container_width=True, config=plotly_300dpi_config)
                 
                 png_cusum, jpg_cusum = render_cusum_matplotlib(c_plus, c_minus, h_calc, dpi=300)
