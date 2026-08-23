@@ -3,4 +3,5 @@ pandas
 numpy
 plotly
 openpyxl
-kaleido
+matplotlib
+kaleido==0.2.1
