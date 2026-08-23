@@ -14,7 +14,7 @@ st.set_page_config(page_title="ARoHaN Lab - Multi-QC Chart Dashboard", layout="w
 col_logo, col_title = st.columns([1, 4])
 
 # Path to logo (or uploaded image file)
-logo_path = "AroHaN_Lab.jpg"
+logo_path = "AroHaN_Lab.png"
 
 with col_logo:
     if os.path.exists(logo_path):
