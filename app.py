@@ -27,7 +27,7 @@ with col_title:
     st.markdown(
         """
         *Developed by **ARoHaN Lab** (Advance Research on Herbals and Naturals, Department of Pharmaceutical Sciences & Technology, BIT Mesra • PI: Dr. Manik Ghosh).*
-        This interactive tool provides real-time quality assurance for weight variations and analytical batch metrics using **Shewhart/Westgard Rules**, **Individual-Moving Range (I-MR)**, and **Cumulative Sum (CUSUM)** control charts.
+        This interactive tool provides real-time quality assurance for clinical/analytical batch metrics using **Shewhart/Westgard Rules**, **Individual-Moving Range (I-MR)**, and **Cumulative Sum (CUSUM)** control charts.
         """
     )
 
