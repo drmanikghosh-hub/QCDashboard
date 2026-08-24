@@ -73,6 +73,8 @@ def apply_crosshair_layout(fig, height=500, title=""):
 
 # 2. Official ARoHaN Lab Branding Header
 col_logo, col_info = st.columns([1, 5])
+# Path to logo (or uploaded image file)
+logo_path = "AroHaN_Lab.png"
 
 with col_logo:
   # SVG Circular Logo Rendering for ARoHaN Lab
