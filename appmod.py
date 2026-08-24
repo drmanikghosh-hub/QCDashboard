@@ -112,6 +112,45 @@ def add_download_options(fig, filename):
         dl_col2.info("💡 Note: Please run `pip install -U kaleido` to enable SVG and High-Res PNG exports.")
 
 
+# --- QC Algorithm Evaluators ---
+def evaluate_westgard_rules(data, mean, std):
+    """Evaluates multi-rule Westgard criteria for a sequence of values."""
+    data_list = list(data)
+    results = ["Accept"] * len(data_list)
+    for i in range(len(data_list)):
+        val = data_list[i]
+        # Rule 1_3s
+        if val > mean + 3*std or val < mean - 3*std:
+            results[i] = "Reject (1_3s)"; continue 
+        
+        if i >= 1:
+            prev = data_list[i-1]
+            # Rule 2_2s
+            if (val > mean + 2*std and prev > mean + 2*std) or (val < mean - 2*std and prev < mean - 2*std):
+                results[i] = "Reject (2_2s)"; continue
+            # Rule R_4s
+            if abs(val - prev) > 4 * std:
+                results[i] = "Reject (R_4s)"; continue
+                
+        if i >= 3:
+            last_4 = data_list[i-3:i+1]
+            # Rule 4_1s
+            if all(v > mean + std for v in last_4) or all(v < mean - std for v in last_4):
+                results[i] = "Reject (4_1s)"; continue
+                
+        if i >= 9:
+            last_10 = data_list[i-9:i+1] 
+            # Rule 10_x
+            if all(v > mean for v in last_10) or all(v < mean for v in last_10):
+                results[i] = "Reject (10_x)"; continue
+                
+        # Rule 1_2s (Warning)
+        if val > mean + 2*std or val < mean - 2*std:
+            results[i] = "Warning (1_2s)"; continue
+            
+    return results
+
+
 # 2. Official ARoHaN Lab Branding Header
 col_logo, col_info = st.columns([1, 5])
 # Path to logo
@@ -672,22 +711,43 @@ if uploaded_file is not None:
           mean_lj = np.mean(lj_data)
           s_lj = np.std(lj_data, ddof=1)
 
-          # Westgard evaluations
-          violations = []
-          for idx, val in enumerate(lj_data):
-            # Rule 1_3s: Exceeds 3 SD
-            if abs(val - mean_lj) > 3 * s_lj:
-              violations.append((idx, val, "1_3s Violation (>3SD)"))
+          # Get Westgard violations evaluation using the updated function
+          westgard_decisions = evaluate_westgard_rules(lj_data, mean_lj, s_lj)
 
           fig = go.Figure()
+          
+          # Plot the underlying process trend line
           fig.add_trace(
               go.Scatter(
                   y=lj_data,
-                  mode="lines+markers",
-                  name="Assay Value",
-                  line=dict(color="#17BECF"),
+                  mode="lines",
+                  name="Assay Value (Trend)",
+                  line=dict(color="lightgray", width=2),
               )
           )
+
+          # Color mappings specifically for each rule detection 
+          color_map = {
+              "Accept": "green", "Warning (1_2s)": "orange", "Reject (1_3s)": "red",
+              "Reject (2_2s)": "darkred", "Reject (R_4s)": "purple", 
+              "Reject (4_1s)": "magenta", "Reject (10_x)": "brown"
+          }
+
+          df_lj = pd.DataFrame({'Run Number': range(len(lj_data)), 'Value': lj_data, 'Decision': westgard_decisions})
+          
+          # Plot scatter markers over the trend line matching the corresponding violation colors
+          for decision, color in color_map.items():
+              subset = df_lj[df_lj['Decision'] == decision]
+              if not subset.empty:
+                  fig.add_trace(
+                      go.Scatter(
+                          x=subset['Run Number'], 
+                          y=subset['Value'], 
+                          mode='markers', 
+                          name=decision, 
+                          marker=dict(color=color, size=10, line=dict(color='black', width=1))
+                      )
+                  )
 
           # Standard deviations lines
           for mult, clr, style in [
@@ -709,37 +769,20 @@ if uploaded_file is not None:
           fig.add_hline(
               y=mean_lj,
               line=dict(color="green", dash="solid"),
-              annotation_text="Target Mean",
+              annotation_text=f"Target Mean ({mean_lj:.2f})",
           )
 
-          # Highlight violations
-          if violations:
-            v_idx, v_vals, v_labels = (
-                [v[0] for v in violations],
-                [v[1] for v in violations],
-                [v[2] for v in violations],
-            )
-            fig.add_trace(
-                go.Scatter(
-                    x=v_idx,
-                    y=v_vals,
-                    mode="markers",
-                    marker=dict(color="red", size=12, symbol="x"),
-                    name="Westgard Violation",
-                    hovertext=v_labels,
-                )
-            )
-
           apply_crosshair_layout(
-              fig, height=500, title="Levey-Jennings QC Chart with Westgard Rules"
+              fig, height=550, title="Levey-Jennings QC Chart with Westgard Rules"
           )
           st.plotly_chart(fig, use_container_width=True)
           add_download_options(fig, "Levey_Jennings_Chart")
 
-          if violations:
-            st.error(f"🚨 Detected {len(violations)} Westgard Rule Out-of-Control points!")
+          rejections = [d for d in westgard_decisions if "Reject" in d]
+          if rejections:
+            st.error(f"🚨 Detected {len(rejections)} Westgard Rule Out-of-Control points! Check the chart legend for specific rejection types.")
           else:
-            st.success("✔ Assay within statistical 3-Sigma limits across all runs.")
+            st.success("✔ Assay within valid control limits across all runs.")
 
       elif adv_chart == "Hotelling's T² Chart (Multivariate Process Control)":
         if len(numeric_cols) >= 2:
