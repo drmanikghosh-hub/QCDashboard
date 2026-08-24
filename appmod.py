@@ -1,4 +1,5 @@
 import base64
+import io
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -70,25 +71,58 @@ def apply_crosshair_layout(fig, height=500, title=""):
   )
   return fig
 
+# Helper function for Publication-Ready Downloads
+def add_download_options(fig, filename):
+    st.markdown("###### Publication-Ready Downloads")
+    dl_col1, dl_col2, dl_col3 = st.columns(3)
+    
+    # 1. Interactive HTML Export
+    html_buffer = io.StringIO()
+    fig.write_html(html_buffer, include_plotlyjs="cdn")
+    html_bytes = html_buffer.getvalue().encode()
+    dl_col1.download_button(
+        label="🌐 Download Interactive HTML",
+        data=html_bytes,
+        file_name=f"{filename}.html",
+        mime="text/html",
+        key=f"{filename}_html"
+    )
+
+    # 2. High-Resolution PNG & SVG (Requires 'kaleido' library)
+    try:
+        # scale=3 acts as a multiplier to approximate 300+ DPI output
+        png_bytes = fig.to_image(format="png", width=1000, height=600, scale=3)
+        dl_col2.download_button(
+            label="🖼️ Download High-Res PNG (300 DPI)",
+            data=png_bytes,
+            file_name=f"{filename}.png",
+            mime="image/png",
+            key=f"{filename}_png"
+        )
+        
+        svg_bytes = fig.to_image(format="svg", width=1000, height=600)
+        dl_col3.download_button(
+            label="📈 Download Vector SVG",
+            data=svg_bytes,
+            file_name=f"{filename}.svg",
+            mime="image/svg+xml",
+            key=f"{filename}_svg"
+        )
+    except Exception as e:
+        dl_col2.info("💡 Note: Please run `pip install -U kaleido` to enable SVG and High-Res PNG exports.")
+
 
 # 2. Official ARoHaN Lab Branding Header
 col_logo, col_info = st.columns([1, 5])
-# Path to logo (or uploaded image file)
+# Path to logo
 logo_path = "AroHaN_Lab.png"
 
 with col_logo:
-  # SVG Circular Logo Rendering for ARoHaN Lab
-  logo_svg = """
-    <svg width="110" height="110" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="50" cy="50" r="46" fill="#002B49" stroke="#00A8E8" stroke-width="3"/>
-      <circle cx="50" cy="50" r="38" fill="none" stroke="#FFFFFF" stroke-dasharray="3 3"/>
-      <text x="50%" y="38%" text-anchor="middle" fill="#FFFFFF" font-size="11" font-weight="bold" font-family="Arial">ARoHaN</text>
-      <text x="50%" y="52%" text-anchor="middle" fill="#00A8E8" font-size="9" font-weight="bold" font-family="Arial">LAB</text>
-      <path d="M 30 68 Q 50 58 70 68" stroke="#00A8E8" stroke-width="2" fill="none"/>
-      <circle cx="50" cy="63" r="2.5" fill="#FFFFFF"/>
-    </svg>
-    """
-  st.markdown(logo_svg, unsafe_allow_html=True)
+  # Load the ARoHaN Lab PNG Logo
+  try:
+      st.image(logo_path, width=110)
+  except Exception:
+      st.error(f"Logo file `{logo_path}` not found in the directory.")
 
 with col_info:
   st.markdown(
@@ -257,6 +291,7 @@ if uploaded_file is not None:
 
           apply_crosshair_layout(fig, height=600, title="I-MR Control Chart")
           st.plotly_chart(fig, use_container_width=True)
+          add_download_options(fig, "IMR_Control_Chart")
 
         elif var_chart == "CUSUM (Cumulative Sum)":
           target = st.number_input("Target Mean (μ₀)", value=float(np.mean(data)))
@@ -281,6 +316,7 @@ if uploaded_file is not None:
           fig.add_hline(y=-h, line=dict(color="red", dash="dash"), annotation_text="-h Threshold")
           apply_crosshair_layout(fig, height=450, title="CUSUM Control Chart")
           st.plotly_chart(fig, use_container_width=True)
+          add_download_options(fig, "CUSUM_Chart")
 
         elif var_chart == "EWMA (Exponentially Weighted Moving Average)":
           lam = st.slider("Weighting Factor (λ)", 0.05, 1.0, 0.2)
@@ -318,6 +354,7 @@ if uploaded_file is not None:
           fig.add_hline(y=mu0, line=dict(color="green"), annotation_text="Target")
           apply_crosshair_layout(fig, height=450, title="EWMA Control Chart")
           st.plotly_chart(fig, use_container_width=True)
+          add_download_options(fig, "EWMA_Chart")
 
         elif var_chart in ["X-bar and R (Mean & Range)", "X-bar and S (Mean & Standard Deviation)"]:
           subgroup_size = st.number_input("Subgroup Size (n)", min_value=2, max_value=25, value=5)
@@ -395,6 +432,7 @@ if uploaded_file is not None:
 
             apply_crosshair_layout(fig, height=600, title=var_chart)
             st.plotly_chart(fig, use_container_width=True)
+            add_download_options(fig, "Xbar_Chart")
 
     # --- TAB 3: ATTRIBUTES CHARTS (Discrete Data) ---
     with tab_attributes:
@@ -490,6 +528,7 @@ if uploaded_file is not None:
             fig, height=450, title="p Control Chart (Proportion Non-Conforming)"
         )
         st.plotly_chart(fig, use_container_width=True)
+        add_download_options(fig, "p_Chart")
 
       elif attr_chart == "np Chart (Number Non-Conforming)":
         if len(set(n_sizes)) > 1:
@@ -532,6 +571,7 @@ if uploaded_file is not None:
             fig, height=450, title="np Control Chart (Number Non-Conforming)"
         )
         st.plotly_chart(fig, use_container_width=True)
+        add_download_options(fig, "np_Chart")
 
       elif attr_chart == "c Chart (Count of Defects per Unit)":
         c_bar = np.mean(defects)
@@ -566,6 +606,7 @@ if uploaded_file is not None:
             fig, height=450, title="c Control Chart (Total Defects)"
         )
         st.plotly_chart(fig, use_container_width=True)
+        add_download_options(fig, "c_Chart")
 
       elif attr_chart == "u Chart (Defects Per Unit)":
         u_i = defects / n_sizes
@@ -608,6 +649,7 @@ if uploaded_file is not None:
             fig, height=450, title="u Control Chart (Defects per Unit)"
         )
         st.plotly_chart(fig, use_container_width=True)
+        add_download_options(fig, "u_Chart")
 
     # --- TAB 4: ADVANCED CHARTS & WESTGARD ---
     with tab_advanced:
@@ -692,6 +734,7 @@ if uploaded_file is not None:
               fig, height=500, title="Levey-Jennings QC Chart with Westgard Rules"
           )
           st.plotly_chart(fig, use_container_width=True)
+          add_download_options(fig, "Levey_Jennings_Chart")
 
           if violations:
             st.error(f"🚨 Detected {len(violations)} Westgard Rule Out-of-Control points!")
@@ -729,6 +772,7 @@ if uploaded_file is not None:
                 fig, height=450, title="Hotelling's T² Multivariate SPC Chart"
             )
             st.plotly_chart(fig, use_container_width=True)
+            add_download_options(fig, "Hotellings_T2_Chart")
           else:
             st.warning("Please select at least 2 metrics.")
 
