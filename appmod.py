@@ -59,14 +59,14 @@ def apply_crosshair_layout(fig, height=500, title=""):
       margin=dict(l=40, r=40, t=60, b=40),
   )
   fig.update_xaxes(
-      showspike=True,
+      showspikes=True,
       spikethickness=1,
       spikecolor="gray",
       spikemode="across",
       spikesnap="cursor",
   )
   fig.update_yaxes(
-      showspike=True, spikethickness=1, spikecolor="gray", spikemode="across"
+      showspikes=True, spikethickness=1, spikecolor="gray", spikemode="across"
   )
   return fig
 
